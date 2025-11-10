@@ -77,7 +77,11 @@ python main.py \
 
 ### Evaluation
 
-Evaluate a trained model on the test set:
+For evaluation on already saved models:
+
+1. Download the checkpoints from the original [DeepDynaForecast GitHub repository](https://github.com/lab-smile/DeepDynaForecast/tree/main)
+2. Place these models in the appropriate folder
+3. Run the evaluation command:
 
 ```bash
 python predict_edges_only.py \
