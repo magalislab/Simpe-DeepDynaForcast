@@ -1,28 +1,36 @@
-# Simple Implementation of DeepDynaForecast (Pure PyTorch)
+# Simple Implementation of DeepDynaForecast
 
-A clean, **pure PyTorch** re-implementation of DeepDynaForecast — no DGL, no PyG — with a flexible data loader, robust training utilities, and a **test-time predictor that needs only the edge CSV**.
-
----
+A clean implementation of DeepDynaForecast using **pure PyTorch** (no external graph libraries!).
 
 ## Key Features
 
-- ✅ **Pure PyTorch Implementation** — no external graph libraries  
-- ✅ **Single-/Multi-GPU Friendly** — simple device handling  
-- ✅ **Clean, Modular Codebase** — easy to read and extend  
-- ✅ **Multiple Architectures** — `GCN`, `GAT`, `GIN`, `PDGLSTM` (LSTM-based message passing)  
-- ✅ **From-Scratch Graph Ops** — collate, message passing, metrics/plots  
-- ✅ **Edges-Only Inference** — run predictions with **only** `test_edge.csv`  
+✅ **Pure PyTorch Implementation** - No DGL, no PyTorch Geometric, just PyTorch!  
+✅ **Single GPU Support** - Simple and efficient  
+✅ **Clean Code Structure** - Easy to read and modify  
+✅ **Multiple GNN Architectures** - GCN, GAT, GIN, LSTM-based models  
+✅ **Custom Graph Operations** - All graph convolutions implemented from scratch  
+✅ **Direct CSV Input** - Load train/val/test data directly from CSV files  
+✅ **Edge-Only Prediction** - Make predictions using only edge CSV files  
 
 ---
 
 ## Installation
 
 ```bash
-# Python 3.8+ recommended
+# Install dependencies (NO graph libraries needed!)
 pip install -r requirements.txt
-# (Optional) For Excel outputs in prediction:
-pip install openpyxl
 ```
+
+---
+
+## Available Models
+
+All models are implemented in pure PyTorch:
+
+- **GCN** - Graph Convolutional Network
+- **GAT** - Graph Attention Network
+- **GIN** - Graph Isomorphism Network
+- **PDGLSTM** - Position-aware Dynamic Graph LSTM
 
 ---
 
@@ -30,160 +38,276 @@ pip install openpyxl
 
 ```
 .
-├── config.py              # CLI args
-├── dataset.py             # Pure-PyTorch dataset + collator
-├── models.py              # create_model() dispatcher
-├── gcn.py                 # GCN (pure PyTorch)
-├── gat.py                 # GAT (pure PyTorch)
-├── gin.py                 # GIN (pure PyTorch)
-├── pdglstm.py             # PDGLSTM (pure PyTorch)
-├── trainer.py             # Training/eval, metrics, plots, checkpoints
-├── main.py                # Train/Eval entry point
-├── predict_edges_only.py  # Inference from EDGES ONLY
-├── requirements.txt
-└── README.md
+├── config.py               # Configuration parameters
+├── dataset.py              # Dataset loading (pure PyTorch)
+├── gcn.py                  # GCN model (pure PyTorch)
+├── gin.py                  # GIN model (pure PyTorch)
+├── pdglstm.py              # PDGLSTM model (pure PyTorch)
+├── trainer.py              # Training/evaluation logic
+├── utils.py                # Metrics and visualization
+├── main.py                 # Entry point for training
+├── predict_edges_only.py   # Edge-only prediction script
+├── requirements.txt        # Dependencies (no graph libraries!)
+└── README.md               # Documentation
 ```
 
 ---
 
-## Dataset Setup
+## Dataset Format
 
-You can obtain the original data from the
-[DeepDynaForecast repository](https://github.com/lab-smile/DeepDynaForecast/tree/main).
+### Node CSV Format
+The node CSV should contain:
+- Node identifiers
+- Node features (if any)
+- Labels for supervised learning
+- Simulation ID (`sim` column) for grouping multiple graphs
 
-The loader supports two usage modes:
+### Edge CSV Format
+The edge CSV should contain:
+- Source node IDs (e.g., `new_from`, `src`, `from`)
+- Target node IDs (e.g., `new_to`, `dst`, `to`)
+- Edge features (e.g., `weight1`, `weight2` or normalized versions)
+- Simulation ID (`sim` column) for grouping multiple graphs
 
-1) **Standard layout (no explicit flags):**  
-   The code will look for CSVs under:
-   ```
-   {ds_dir}/{ds_name}/{ds_split}/
-       train.csv, train_edge.csv
-       val.csv,   val_edge.csv
-       test.csv,  test_edge.csv
-   ```
-   where `ds_split` is typically `ddf_resp+TB_20230222` or similar.
-
-2) **Explicit paths (recommended for custom layouts):**  
-   You can override any phase with:
-   ```
-   --train_csv /path/to/train.csv           --train_edge_csv /path/to/train_edge.csv
-   --val_csv   /path/to/val.csv             --val_edge_csv   /path/to/val_edge.csv
-   --test_csv  /path/to/test.csv            --test_edge_csv  /path/to/test_edge.csv
-   ```
-   If you provide only `--{phase}_csv`, the code will **infer** the edge file as `..._edge.csv`.
-
-> **Columns expected by `dataset.py` (train/val/test):**  
-> - **Nodes CSV:** must include `sim`, `node`, `cluster_id`, `state`, and `dynamic_cat` (labels on **leaf** nodes).  
-> - **Edges CSV:** must include `sim`, endpoints (`new_from`, `new_to`), and two features
->   `weight1_arsinh-norm`, `weight2_arsinh-norm` (or compatible names; see inference below).
+**Note:** The script automatically detects column names, so you can use various naming conventions.
 
 ---
 
 ## Usage
 
-### Training
+### Training with Direct CSV Input
+
+You can now provide direct paths to your CSV files instead of relying on directory structures:
 
 ```bash
-python main.py --mode train   --ds_dir /data/cleaned   --ds_name ddf_resp+TB_20230222   --ds_split splitA   --model pdglstm   --batch_size 4 --lr 1e-3 --max_epochs 100   --optimizer Adam --weight_decay 4e-4   --num_workers 4 --seed 123
+python main.py \
+  --mode train \
+  --model gcn \
+  --model_num 1 \
+  --train_csv "/path/to/train.csv" \
+  --train_edge_csv "/path/to/train_edge.csv" \
+  --val_csv "/path/to/valid.csv" \
+  --val_edge_csv "/path/to/valid_edge.csv" \
+  --test_csv "/path/to/test.csv" \
+  --test_edge_csv "/path/to/test_edge.csv" \
+  --hidden_dim 128 \
+  --num_layers 20 \
+  --batch_size 4 \
+  --lr 0.001 \
+  --max_epochs 100
 ```
 
-**Optional data flags**
-- `--train_csv/--train_edge_csv`, `--val_csv/--val_edge_csv`, `--test_csv/--test_edge_csv`
-- Graph tweaks (if exposed in `config.py`): `--add_self_loop`, `--bidirection`
-
-**Outputs** (under `experiments/{model}_{model_num}/`):
-- Checkpoints: `best_model.pth`, `checkpoint_{epoch}.pth`
-- Plots/CSVs per phase: `ROC_per_class.png`, `ROC_merged.png`, `confusion_mat.png/.eps`,
-  `metrics.json`, macro ROC CSV, CM pairs & matrix CSVs
-
-### Evaluation (Full pipeline)
+**Automatic Edge CSV Detection:** If you only provide node CSV paths, the script will automatically look for corresponding edge CSV files by replacing `.csv` with `_edge.csv`:
 
 ```bash
-python main.py --mode eval   --ds_dir /data/cleaned   --ds_name ddf_resp+TB_20230222   --ds_split splitA   --model pdglstm   --checkpoint experiments/PDGLSTM_0/best_model.pth
+python main.py \
+  --mode train \
+  --model gcn \
+  --train_csv "/path/to/train.csv" \
+  --val_csv "/path/to/valid.csv" \
+  --test_csv "/path/to/test.csv"
+  # Automatically looks for train_edge.csv, valid_edge.csv, test_edge.csv
 ```
 
-### **Edges-Only Inference (No node CSV required)**
-
-Use the dedicated script to predict classes directly from *just* the edge CSV:
+**Legacy Directory-Based Approach:** You can still use the old approach with `--ds_dir`, `--ds_name`, and `--ds_split`:
 
 ```bash
-python predict_edges_only.py   --edge_csv /data/cleaned/ddf_resp+TB_20230222/splitA/test_edge.csv   --model_py pdglstm.py   --checkpoint experiments/PDGLSTM_0/best_model.pth   --output predictions.xlsx   --leaf_only 1
+python main.py \
+  --mode train \
+  --ds_dir 'cleaned_data' \
+  --ds_name 'ddf_resp_20230131' \
+  --ds_split 'split_rs123' \
+  --model gcn \
+  --batch_size 4
 ```
 
-**What it does**
-- Auto-detects endpoint columns among: `new_from/new_to`, `src/dst`, `from/to`, etc.  
-- Auto-detects two numeric edge features, preferring `weight1_arsinh-norm` & `weight2_arsinh-norm`.  
-- Groups by `sim` (if absent, treats the file as one graph).  
-- Synthesizes node features (16-D constant `0.5`), matching training.  
-- Produces:
-  - **Nodes sheet/CSV**: node-level predictions (`static/decay/growth/background` + probabilities)
-  - **Edges sheet/CSV**: original rows + destination node prediction columns (`*_dst`)
+### Evaluation
 
-**`--leaf_only` flag**
-- `--leaf_only 1` (default): Output **only leaf nodes** (dst not in src). Matches labeling scheme.
-- `--leaf_only 0`: Output predictions for **all nodes** (useful for debugging/analysis).
+Evaluate a trained model on the test set:
 
-> If `--output` ends with `.xlsx`, results are written to a workbook (`nodes`, `edges`).  
-> Otherwise two CSVs are written: `<stem>_nodes.csv`, `<stem>_edges.csv`.
+```bash
+python main.py \
+  --mode eval \
+  --model gcn \
+  --checkpoint 'experiments/gcn_1/best_model.pth' \
+  --test_csv "/path/to/test.csv" \
+  --test_edge_csv "/path/to/test_edge.csv"
+```
+
+### Edge-Only Prediction
+
+Make predictions using **only edge data** (no node CSV required):
+
+```bash
+python predict_edges_only.py \
+  --edge_csv "/path/to/edges.csv" \
+  --model_py pdglstm.py \
+  --checkpoint "experiments/PDGLSTM_0/best_model.pth" \
+  --output predictions.xlsx \
+  --leaf_only 1
+```
+
+**Parameters:**
+- `--edge_csv`: Path to the edge CSV file
+- `--model_py`: Python file defining the model architecture (e.g., `pdglstm.py`, `gcn.py`)
+- `--checkpoint`: Path to the trained model checkpoint
+- `--output`: Output file path (`.xlsx` for Excel, otherwise CSV)
+- `--leaf_only`: Set to `1` to predict only leaf nodes, `0` for all nodes
+- `--device`: Device selection (`auto`, `cpu`, or `cuda`)
+
+**Output Formats:**
+- **Excel (`.xlsx`)**: Creates a workbook with two sheets - `nodes` and `edges`
+- **CSV**: Creates two files - `{name}_nodes.csv` and `{name}_edges.csv`
+
+**Output Columns:**
+- Node predictions include: `sim`, `node_id`, `pred_class_id`, `pred_class_name`, and probability scores
+- Edge predictions include: original edge data plus destination node predictions
 
 ---
 
-## Configuration Options (selected)
+## Configuration Options
 
 ### General
-- `--mode {train,eval}`
-- `--device {cuda,cpu}` (auto-handled in code)
-- `--seed` (default: 123)
-- Logging level configurable via `--log_level`
+- `--seed`: Random seed (default: 123)
+- `--device`: Device to use (cuda/cpu)
+- `--mode`: train or eval
+- `--log_level`: Logging level (INFO/DEBUG/WARNING)
 
-### Data
-- `--ds_dir`, `--ds_name`, `--ds_split`
-- Optional per-phase overrides: `--train_csv/--train_edge_csv`, `--val_csv/--val_edge_csv`, `--test_csv/--test_edge_csv`
-- Loader knobs (if enabled): `--add_self_loop`, `--bidirection`
+### Data - Direct CSV Input (Recommended)
+- `--train_csv`: Path to training node CSV
+- `--train_edge_csv`: Path to training edge CSV (auto-detected if omitted)
+- `--val_csv`: Path to validation node CSV
+- `--val_edge_csv`: Path to validation edge CSV (auto-detected if omitted)
+- `--test_csv`: Path to test node CSV
+- `--test_edge_csv`: Path to test edge CSV (auto-detected if omitted)
+
+### Data - Legacy Directory-Based
+- `--ds_name`: Dataset name
+- `--ds_dir`: Dataset directory
+- `--ds_split`: Dataset split subdirectory
+
+### Data Loading
+- `--batch_size`: Batch size (default: 4)
+- `--num_workers`: DataLoader workers (default: 0)
 
 ### Model
-- `--model {gcn,gat,gin,pdglstm}`
-- Typical knobs: `--hidden_dim`, `--num_layers`, `--dropout`
+- `--model`: Model type (gcn/gat/gin/pdglstm)
+- `--model_num`: Model instance number for saving
+- `--hidden_dim`: Hidden dimension (default: 128)
+- `--num_layers`: Number of layers (default: 20)
+- `--dropout`: Dropout rate (default: 0.5)
 
 ### Training
-- `--optimizer {Adam,SGD,RMSprop}`
-- `--lr`, `--weight_decay`
-- LR schedulers via `--lr_decay_mode {step,plateau}`, `--lr_decay_step`, `--lr_decay_rate`
-- `--max_epochs`, `--early_stopping`, `--grad_clip`
+- `--max_epochs`: Maximum epochs (default: 100)
+- `--optimizer`: Optimizer (Adam/SGD/RMSprop)
+- `--lr`: Learning rate (default: 0.001)
+- `--weight_decay`: Weight decay (default: 0.0004)
+- `--early_stopping`: Early stopping patience (default: 10)
 
-### Loss / Labels
-- Classes: `{0: static, 1: decay, 2: growth, 3: background}`
-- `--loss_ignore_bg` to zero-weight background during CE
-- `--background_class` (default: 3)
-
----
-
-## Metrics & Plots
-
-`trainer.py` computes and saves:
-- Accuracy, Balanced Accuracy, Macro/Weighted F1, Precision/Recall (macro)
-- Brier score, Cross-entropy
-- ROC-AUC (`ovo` and `ovr`, macro and weighted)
-- Confusion matrices (PNG/EPS + CSVs)
-- Per-class and merged ROC curves + CSV export of macro ROC
+### Evaluation
+- `--checkpoint`: Path to model checkpoint file
 
 ---
 
-## Tips & Troubleshooting
+## Examples
 
-- **Missing columns?**  
-  Use explicit per-phase flags to point to the correct CSVs. For edges-only inference, ensure you have two numeric features per edge; names are auto-detected.
-- **Checkpoint loading issues?**  
-  Loader handles `state_dict` vs `model_state_dict` and strips `module.` if saved via `DataParallel`.
-- **Leaf logic**  
-  During training, labels typically exist **only for leaves** (`dynamic_cat`); `leaf_only=1` keeps predictions aligned with evaluation.
+### Example 1: Training GCN with Direct CSV Paths
+
+```bash
+python main.py \
+  --mode train \
+  --model gcn \
+  --model_num 1 \
+  --train_csv "/data/train.csv" \
+  --train_edge_csv "/data/train_edge.csv" \
+  --val_csv "/data/valid.csv" \
+  --val_edge_csv "/data/valid_edge.csv" \
+  --test_csv "/data/test.csv" \
+  --test_edge_csv "/data/test_edge.csv" \
+  --hidden_dim 64 \
+  --num_layers 10 \
+  --batch_size 8 \
+  --lr 0.001 \
+  --max_epochs 50
+```
+
+### Example 2: Training PDGLSTM with Auto-Detection
+
+```bash
+python main.py \
+  --mode train \
+  --model pdglstm \
+  --train_csv "/data/train.csv" \
+  --val_csv "/data/valid.csv" \
+  --test_csv "/data/test.csv" \
+  --batch_size 4
+```
+
+### Example 3: Prediction on New Data
+
+```bash
+python predict_edges_only.py \
+  --edge_csv "/data/new_edges.csv" \
+  --model_py pdglstm.py \
+  --checkpoint "experiments/PDGLSTM_1/best_model.pth" \
+  --output results.xlsx \
+  --leaf_only 1
+```
+
+---
+
+## Output Files
+
+### Training Mode
+- `experiments/{model}_{model_num}/best_model.pth` - Best model checkpoint
+- `experiments/{model}_{model_num}/training_log.txt` - Training logs
+
+### Prediction Mode (Edge-Only)
+- Excel format (`.xlsx`): Single workbook with `nodes` and `edges` sheets
+- CSV format: Two files - `{name}_nodes.csv` and `{name}_edges.csv`
+
+**Node Predictions Include:**
+- Simulation ID
+- Node ID
+- Predicted class (ID and name)
+- Probability scores for all classes (static, decay, growth, background)
+
+**Edge Predictions Include:**
+- All original edge data
+- Destination node predictions
+- Probability scores for destination nodes
+
+---
+
+## Class Labels
+
+The model predicts one of four classes:
+- **0**: Static
+- **1**: Decay
+- **2**: Growth
+- **3**: Background
+
+---
+
+## Troubleshooting
+
+### Issue: Edge CSV not found
+**Solution:** Make sure edge CSV files follow the naming convention `{name}_edge.csv` or explicitly provide paths using `--{phase}_edge_csv` flags.
+
+### Issue: Column detection fails
+**Solution:** The script auto-detects various column names (`new_from/new_to`, `src/dst`, `from/to`, etc.). Check your CSV headers match these patterns.
+
+### Issue: Multiple graphs not recognized
+**Solution:** Ensure your CSV has a `sim` column to group edges into different graphs. If missing, all edges are treated as a single graph.
 
 ---
 
 ## Acknowledgments
 
-This project uses datasets and ideas from  
-**DeepDynaForecast** — <https://github.com/lab-smile/DeepDynaForecast>.  
-Please cite their work if you use their datasets or concepts.
+This implementation is based on the original [DeepDynaForecast](https://github.com/lab-smile/DeepDynaForecast) repository. Please cite their work if you use their datasets or methodology.
 
 ---
+
+## License
+
+Please refer to the original [DeepDynaForecast repository](https://github.com/lab-smile/DeepDynaForecast) for licensing information.
