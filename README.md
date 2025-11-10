@@ -2,15 +2,8 @@
 
 A clean implementation of DeepDynaForecast using **pure PyTorch** (no external graph libraries!).
 
-## Key Features
-
-✅ **Pure PyTorch Implementation** - No DGL, no PyTorch Geometric, just PyTorch!  
-✅ **Single GPU Support** - Simple and efficient  
+## Key Features 
 ✅ **Clean Code Structure** - Easy to read and modify  
-✅ **Multiple GNN Architectures** - GCN, GAT, GIN, LSTM-based models  
-✅ **Custom Graph Operations** - All graph convolutions implemented from scratch  
-✅ **Direct CSV Input** - Load train/val/test data directly from CSV files  
-✅ **Edge-Only Prediction** - Make predictions using only edge CSV files  
 
 ---
 
@@ -27,49 +20,10 @@ pip install -r requirements.txt
 
 All models are implemented in pure PyTorch:
 
-- **GCN** - Graph Convolutional Network
-- **GAT** - Graph Attention Network
-- **GIN** - Graph Isomorphism Network
-- **PDGLSTM** - Position-aware Dynamic Graph LSTM
-
----
-
-## Project Structure
-
-```
-.
-├── config.py               # Configuration parameters
-├── dataset.py              # Dataset loading (pure PyTorch)
-├── gcn.py                  # GCN model (pure PyTorch)
-├── gin.py                  # GIN model (pure PyTorch)
-├── pdglstm.py              # PDGLSTM model (pure PyTorch)
-├── trainer.py              # Training/evaluation logic
-├── utils.py                # Metrics and visualization
-├── main.py                 # Entry point for training
-├── predict_edges_only.py   # Edge-only prediction script
-├── requirements.txt        # Dependencies (no graph libraries!)
-└── README.md               # Documentation
-```
-
----
-
-## Dataset Format
-
-### Node CSV Format
-The node CSV should contain:
-- Node identifiers
-- Node features (if any)
-- Labels for supervised learning
-- Simulation ID (`sim` column) for grouping multiple graphs
-
-### Edge CSV Format
-The edge CSV should contain:
-- Source node IDs (e.g., `new_from`, `src`, `from`)
-- Target node IDs (e.g., `new_to`, `dst`, `to`)
-- Edge features (e.g., `weight1`, `weight2` or normalized versions)
-- Simulation ID (`sim` column) for grouping multiple graphs
-
-**Note:** The script automatically detects column names, so you can use various naming conventions.
+- **GCN** 
+- **GAT** 
+- **GIN** 
+- **PDGLSTM** 
 
 ---
 
@@ -97,18 +51,6 @@ python main.py \
   --max_epochs 100
 ```
 
-**Automatic Edge CSV Detection:** If you only provide node CSV paths, the script will automatically look for corresponding edge CSV files by replacing `.csv` with `_edge.csv`:
-
-```bash
-python main.py \
-  --mode train \
-  --model gcn \
-  --train_csv "/path/to/train.csv" \
-  --val_csv "/path/to/valid.csv" \
-  --test_csv "/path/to/test.csv"
-  # Automatically looks for train_edge.csv, valid_edge.csv, test_edge.csv
-```
-
 **Legacy Directory-Based Approach:** You can still use the old approach with `--ds_dir`, `--ds_name`, and `--ds_split`:
 
 ```bash
@@ -124,19 +66,6 @@ python main.py \
 ### Evaluation
 
 Evaluate a trained model on the test set:
-
-```bash
-python main.py \
-  --mode eval \
-  --model gcn \
-  --checkpoint 'experiments/gcn_1/best_model.pth' \
-  --test_csv "/path/to/test.csv" \
-  --test_edge_csv "/path/to/test_edge.csv"
-```
-
-### Edge-Only Prediction
-
-Make predictions using **only edge data** (no node CSV required):
 
 ```bash
 python predict_edges_only.py \
@@ -155,13 +84,6 @@ python predict_edges_only.py \
 - `--leaf_only`: Set to `1` to predict only leaf nodes, `0` for all nodes
 - `--device`: Device selection (`auto`, `cpu`, or `cuda`)
 
-**Output Formats:**
-- **Excel (`.xlsx`)**: Creates a workbook with two sheets - `nodes` and `edges`
-- **CSV**: Creates two files - `{name}_nodes.csv` and `{name}_edges.csv`
-
-**Output Columns:**
-- Node predictions include: `sim`, `node_id`, `pred_class_id`, `pred_class_name`, and probability scores
-- Edge predictions include: original edge data plus destination node predictions
 
 ---
 
@@ -231,52 +153,6 @@ python main.py \
   --max_epochs 50
 ```
 
-### Example 2: Training PDGLSTM with Auto-Detection
-
-```bash
-python main.py \
-  --mode train \
-  --model pdglstm \
-  --train_csv "/data/train.csv" \
-  --val_csv "/data/valid.csv" \
-  --test_csv "/data/test.csv" \
-  --batch_size 4
-```
-
-### Example 3: Prediction on New Data
-
-```bash
-python predict_edges_only.py \
-  --edge_csv "/data/new_edges.csv" \
-  --model_py pdglstm.py \
-  --checkpoint "experiments/PDGLSTM_1/best_model.pth" \
-  --output results.xlsx \
-  --leaf_only 1
-```
-
----
-
-## Output Files
-
-### Training Mode
-- `experiments/{model}_{model_num}/best_model.pth` - Best model checkpoint
-- `experiments/{model}_{model_num}/training_log.txt` - Training logs
-
-### Prediction Mode (Edge-Only)
-- Excel format (`.xlsx`): Single workbook with `nodes` and `edges` sheets
-- CSV format: Two files - `{name}_nodes.csv` and `{name}_edges.csv`
-
-**Node Predictions Include:**
-- Simulation ID
-- Node ID
-- Predicted class (ID and name)
-- Probability scores for all classes (static, decay, growth, background)
-
-**Edge Predictions Include:**
-- All original edge data
-- Destination node predictions
-- Probability scores for destination nodes
-
 ---
 
 ## Class Labels
@@ -289,25 +165,7 @@ The model predicts one of four classes:
 
 ---
 
-## Troubleshooting
-
-### Issue: Edge CSV not found
-**Solution:** Make sure edge CSV files follow the naming convention `{name}_edge.csv` or explicitly provide paths using `--{phase}_edge_csv` flags.
-
-### Issue: Column detection fails
-**Solution:** The script auto-detects various column names (`new_from/new_to`, `src/dst`, `from/to`, etc.). Check your CSV headers match these patterns.
-
-### Issue: Multiple graphs not recognized
-**Solution:** Ensure your CSV has a `sim` column to group edges into different graphs. If missing, all edges are treated as a single graph.
-
----
-
 ## Acknowledgments
 
 This implementation is based on the original [DeepDynaForecast](https://github.com/lab-smile/DeepDynaForecast) repository. Please cite their work if you use their datasets or methodology.
 
----
-
-## License
-
-Please refer to the original [DeepDynaForecast repository](https://github.com/lab-smile/DeepDynaForecast) for licensing information.
