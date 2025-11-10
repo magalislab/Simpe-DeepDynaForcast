@@ -147,30 +147,6 @@ python predict_edges_only.py \
 
 ---
 
-## Examples
-
-### Example 1: Training GCN with Direct CSV Paths
-
-```bash
-python main.py \
-  --mode train \
-  --model gcn \
-  --model_num 1 \
-  --train_csv "/data/train.csv" \
-  --train_edge_csv "/data/train_edge.csv" \
-  --val_csv "/data/valid.csv" \
-  --val_edge_csv "/data/valid_edge.csv" \
-  --test_csv "/data/test.csv" \
-  --test_edge_csv "/data/test_edge.csv" \
-  --hidden_dim 64 \
-  --num_layers 10 \
-  --batch_size 8 \
-  --lr 0.001 \
-  --max_epochs 50
-```
-
----
-
 ## Class Labels
 
 The model predicts one of four classes:
