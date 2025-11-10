@@ -25,6 +25,18 @@ All models are implemented in pure PyTorch:
 - **GIN** 
 - **PDGLSTM** 
 
+
+---
+
+## Dataset Setup
+
+For training the model, you need to download and preprocess the dataset from the original [DeepDynaForecast GitHub repository](https://github.com/lab-smile/DeepDynaForecast/tree/main). 
+
+### Steps:
+1. Download the dataset from the original repository
+2. Preprocess the data as needed
+3. Place the datasets into the appropriate folder
+
 ---
 
 ## Usage
