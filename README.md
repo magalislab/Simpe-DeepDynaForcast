@@ -21,10 +21,10 @@ pip install -r requirements.txt
 All models are implemented in pure PyTorch:
 
 - **GCN** 
-- **GAT** 
-- **GIN** 
+- **GIN**
 - **PDGLSTM** 
 
+GCN and GIN serve as baseline models, while PDGLSTM is the proposed DeepDynaForecast architecture.
 
 ---
 
