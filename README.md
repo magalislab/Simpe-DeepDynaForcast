@@ -24,7 +24,7 @@ All models are implemented in pure PyTorch:
 - **GIN**
 - **PDGLSTM** 
 
-GCN and GIN serve as baseline models, while PDGLSTM is the proposed DeepDynaForecast architecture.
+**GCN** and **GIN** serve as baseline models, while **PDGLSTM** is the proposed DeepDynaForecast architecture.
 
 ---
 
